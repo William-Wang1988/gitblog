@@ -5,3 +5,4 @@ My personal blog using issues and GitHub Action
 - [About this blog](https://github.com/William-Wang1988/gitblog/issues/8)--2020-08-31
 ## 置顶文章
 - [About this blog](https://github.com/William-Wang1988/gitblog/issues/8)--2020-08-31
+## Diary
