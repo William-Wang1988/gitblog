@@ -2,7 +2,7 @@ name: Generate GitBlog README
 
 on:
   issues:
-    types: [opened, edited, deleted]
+    types: [opened, edited]
   push:
     branches:
       - master
@@ -29,7 +29,6 @@ jobs:
           key: pip-1-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             pip-
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -40,9 +39,8 @@ jobs:
 
       - name: Generate new md
         run: |
-          echo ${{github.repository}}
           source venv/bin/activate
-          python main.py ${{ secrets.GITBLOG }} ${{github.repository}}
+          python main.py ${{ secrets.GITBLOG }}
         
       - name: Push README
         uses: github-actions-x/commit@v2.6
