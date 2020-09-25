@@ -7,20 +7,15 @@ MD_HEAD = """## Gitblog
 My personal blog using issues and GitHub Action
 """
 
+ME_GITHUB_NAME = "gatsby101"
 ANCHOR_NUMBER = 5
 TOP_ISSUES_LABELS = [
     "Top",
 ]
-TODO_ISSUES_LABELS = [
-    "TODO",
-]
 
 
-def get_me(user):
-    return user.get_user().login
-
-def isMe(issue, me):
-    return issue.user.login == me
+def isMe(issue):
+    return issue.user.login == ME_GITHUB_NAME
 
 
 def format_time(time):
@@ -34,21 +29,10 @@ def login(token):
 def get_repo(user: Github, repo: str):
     return user.get_repo(repo)
 
-def parseTODO(issue):
-    body = issue.body.splitlines()
-    todo_undone = [l for l in body if l.startswith("- [ ] ")]
-    todo_done = [l for l in body if l.startswith("- [x] ")]
-    # just add info all done
-    if not todo_undone:
-        return f"[{issue.title}]({issue.html_url}) all done", []
-    return f"[{issue.title}]({issue.html_url})--{len(todo_undone)} jobs to do--{len(todo_done)} jobs done", todo_done + todo_undone
-
 
 def get_top_issues(repo):
     return repo.get_issues(labels=TOP_ISSUES_LABELS)
 
-def get_todo_issues(repo):
-    return repo.get_issues(labels=TODO_ISSUES_LABELS)
 
 def get_repo_labels(repo):
     return [l for l in repo.get_labels()]
@@ -63,43 +47,24 @@ def add_issue_info(issue, md):
     md.write(f"- [{issue.title}]({issue.html_url})--{time}\n")
 
 
-def add_md_todo(repo, md, me):
-    todo_issues = list(get_todo_issues(repo))
-    if not TODO_ISSUES_LABELS or not todo_issues:
+def add_md_top(repo, md):
+    if not TOP_ISSUES_LABELS:
         return
+    top_issues = get_top_issues(repo)
     with open(md, "a+", encoding="utf-8") as md:
-        md.write("## TODO\n")
-        for issue in todo_issues:
-            if isMe(issue, me):
-                todo_title, todo_list = parseTODO(issue)
-                md.write("TODO list from " + todo_title + "\n")
-                for t in todo_list:
-                    md.write(t + "\n")
-                # new line
-                md.write("\n")
-
-
-def add_md_top(repo, md, me):
-    top_issues = list(get_top_issues(repo))
-    if not TOP_ISSUES_LABELS or not top_issues:
-        return
-    with open(md, "a+", encoding="utf-8") as md:
-        md.write("## 置顶文章\n")
+        md.write("## TOP\n")
         for issue in top_issues:
-            if isMe(issue, me):
+            if isMe(issue):
                 add_issue_info(issue, md)
 
 
-def add_md_recent(repo, md, me):
+def add_md_recent(repo, md):
     new_five_issues = repo.get_issues()[:5]
     with open(md, "a+", encoding="utf-8") as md:
-        try:
-            md.write("## 最近更新\n")
-            for issue in new_five_issues:
-                if isMe(issue, me):
-                    add_issue_info(issue, md)
-        except:
-            return
+        md.write("## Recently updated\n")
+        for issue in new_five_issues:
+            if isMe(issue):
+                add_issue_info(issue, md)
 
 
 def add_md_header(md):
@@ -107,17 +72,13 @@ def add_md_header(md):
         md.write(MD_HEAD)
 
 
-def add_md_label(repo, md, me):
+def add_md_label(repo, md):
     labels = get_repo_labels(repo)
     with open(md, "a+", encoding="utf-8") as md:
         for label in labels:
 
             # we don't need add top label again
             if label.name in TOP_ISSUES_LABELS:
-                continue
-
-            # we don't need add todo label again
-            if label.name in TODO_ISSUES_LABELS:
                 continue
 
             issues = get_issues_from_label(repo, label)
@@ -128,9 +89,9 @@ def add_md_label(repo, md, me):
             for issue in issues:
                 if not issue:
                     continue
-                if isMe(issue, me):
+                if isMe(issue):
                     if i == ANCHOR_NUMBER:
-                        md.write("<details><summary>显示更多</summary>\n")
+                        md.write("<details><summary>More</summary>\n")
                         md.write("\n")
                     add_issue_info(issue, md)
                     i += 1
@@ -139,19 +100,18 @@ def add_md_label(repo, md, me):
                 md.write("\n")
 
 
-def main(token, repo_name):
+def main(token):
     user = login(token)
-    me = get_me(user)
-    repo = get_repo(user, repo_name)
+    repo = get_repo(user, "gatsby101/gitblog")
+    get_top_issues(repo)
     add_md_header("README.md")
-    # add to readme one by one, change order here
-    for func in [add_md_top, add_md_recent, add_md_label, add_md_todo]:
-        func(repo, "README.md", me)
+    add_md_top(repo, "README.md")
+    add_md_recent(repo, "README.md")
+    add_md_label(repo, "README.md")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("github_token", help="github_token")
-    parser.add_argument("repo_name", help="repo_name")
     options = parser.parse_args()
-    main(options.github_token, options.repo_name)
+    main(options.github_token)
